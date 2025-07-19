@@ -15,8 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -29,8 +29,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
@@ -39,13 +37,10 @@ import java.util.List;
 @EnableWebSecurity
 public class AppConfiguration {
 
-    private String [] publicUrls = {
-        "/api/user/create", "/v3/api-docs/**",    // OpenAPI JSON
-            "/swagger-ui.html",   // Swagger UI HTML entrypoint
-            "/swagger-ui/**",     // Swagger UI resources (JS, CSS)
-            "/webjars/**",        // (optional, legacy)
-            "/actuator/**",
-            "/api/auth/login",
+    private final String[] publicUrls = {
+            "/api/user/create", "/v3/api-docs/**",
+            "/swagger-ui.html", "/swagger-ui/**",
+            "/webjars/**", "/actuator/**", "/api/auth/login"
     };
 
     @Autowired
@@ -57,22 +52,24 @@ public class AppConfiguration {
 
     @Autowired
     private JwtFilter jwtFilter;
+
     @Autowired
     private JwtService jwtService;
-    private ObjectMapper objectMapper = new ObjectMapper();
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Bean
-    public PasswordEncoder getPasswordEncoder() {
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173","https://health-inspector.onrender.com")); // frontend port
+        config.addAllowedOriginPattern("*");
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true); // important for cookies or auth headers
+        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -80,64 +77,61 @@ public class AppConfiguration {
     }
 
     @Bean
-    public UserDetailsService getUserDetailsService() {
+    public UserDetailsService userDetailsService() {
         return myUserDetailsService;
     }
 
     @Bean
-    public ModelMapper getModelMapper() {
+    public ModelMapper modelMapper() {
         return new ModelMapper();
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
-        authenticationProvider.setUserDetailsService(myUserDetailsService);
-        authenticationProvider.setPasswordEncoder(getPasswordEncoder());
-        return authenticationProvider;
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
-    @Bean
-    public AuthenticationManager authManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
-    }
     public AuthFilter getAuthFilter(AuthenticationManager authenticationManager) {
         AuthFilter authFilter = new AuthFilter();
         authFilter.setAuthenticationManager(authenticationManager);
-        authFilter.setFilterProcessesUrl("/api/auth/login"); //login endpoints
+        authFilter.setFilterProcessesUrl("/api/auth/login");
 
-        authFilter.setAuthenticationSuccessHandler((request,response,authentication) -> {
-                response.setStatus(HttpServletResponse.SC_OK);
-                objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+        authFilter.setAuthenticationSuccessHandler((request, response, authentication) -> {
+            response.setStatus(HttpServletResponse.SC_OK);
+            objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
 
-                UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-                UserData userData = userService.fetchDataByEmail(userPrincipal.getUsername());
-                AuthResponse authResponse = new AuthResponse(userData.getUsername(),userData.getEmail(),userData.getRole(),jwtService.generateToken(userData));
-                response.getWriter().write(objectMapper.writeValueAsString(authResponse));
+            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+            UserData userData = userService.fetchDataByEmail(userPrincipal.getUsername());
+            AuthResponse authResponse = new AuthResponse(
+                    userData.getUsername(),
+                    userData.getEmail(),
+                    userData.getRole(),
+                    jwtService.generateToken(userData));
+            response.getWriter().write(objectMapper.writeValueAsString(authResponse));
         });
 
-        authFilter.setAuthenticationFailureHandler(((request, response, exception) -> {
-              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-              response.getWriter().write("Login Failure "+exception.getMessage());
-              log.error("login error: {}",exception.getMessage());
-        }));
-
+        authFilter.setAuthenticationFailureHandler((request, response, exception) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Login Failure " + exception.getMessage());
+            log.error("login error: {}", exception.getMessage());
+        });
 
         return authFilter;
     }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager manager) throws Exception {
-        http.
-            csrf(CsrfConfigurer::disable)
+        http
+                .csrf(CsrfConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(requests -> {
-            requests.requestMatchers(publicUrls)
-                    .permitAll()
-                    .anyRequest().authenticated();
-        })
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(publicUrls).permitAll()
+                        .anyRequest().authenticated())
+                .userDetailsService(myUserDetailsService) // ✅ this replaces deprecated DaoAuthenticationProvider
                 .addFilterAt(getAuthFilter(manager), UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(jwtFilter,UsernamePasswordAuthenticationFilter.class);
+                .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
-
 }

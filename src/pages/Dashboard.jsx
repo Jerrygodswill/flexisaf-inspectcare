@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import AiEnquiry from "../components/AiEnquiry"; // Adjust the path if needed
 import "./Dashboard.css";
 
 function Dashboard() {
@@ -7,7 +8,7 @@ function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      {/* 🔙 Navigation Buttons */}
+      {/* Navigation Buttons */}
       <div
         style={{
           display: "flex",
@@ -58,6 +59,7 @@ function Dashboard() {
           Appointments
         </button>
       </div>
+
       <div className="dashboard-grid 2">
         <button
           className="dashboard-button"
@@ -71,6 +73,11 @@ function Dashboard() {
         >
           Ambulance
         </button>
+      </div>
+
+      {/* Render the AI Enquiry component */}
+      <div style={{ marginTop: "2rem" }}>
+        <AiEnquiry />
       </div>
     </div>
   );

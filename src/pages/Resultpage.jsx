@@ -1,9 +1,48 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../pages/symptoms.css";
 
 const ResultPage = ({ selectedSymptoms, score, severity }) => {
   const navigate = useNavigate();
+  const [aiResponse, setAiResponse] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchAIInsights = async () => {
+      if (!selectedSymptoms || selectedSymptoms.length === 0) return;
+
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await fetch("http://localhost:8000/ai/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            symptoms: selectedSymptoms,
+            score,
+            severity,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("AI service returned an error.");
+        }
+
+        const data = await response.json();
+        setAiResponse(data?.message || "No detailed insight available.");
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAIInsights();
+  }, [selectedSymptoms, score, severity]);
 
   return (
     <div className="container2">
@@ -15,6 +54,7 @@ const ResultPage = ({ selectedSymptoms, score, severity }) => {
           Next ➡
         </button>
       </div>
+
       <h1>InspectCare</h1>
 
       <div className="result-header">
@@ -54,6 +94,18 @@ const ResultPage = ({ selectedSymptoms, score, severity }) => {
           <strong>Warning:</strong> These symptoms should never be ignored.
           Please seek medical attention promptly.
         </p>
+      </div>
+
+      {/* AI API Response Section */}
+      <div className="ai-response-card">
+        <h3>🤖 AI Analysis</h3>
+        {loading ? (
+          <p>Analyzing symptoms using AI...</p>
+        ) : error ? (
+          <p style={{ color: "red" }}>{error}</p>
+        ) : (
+          <p>{aiResponse}</p>
+        )}
       </div>
 
       <div className="footer-note">
