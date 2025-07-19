@@ -36,26 +36,43 @@ const LandingPage = () => {
           InspectCare
         </h1>
         <nav className="nav-buttons">
-          {localStorage.getItem("token") ? (
-            <button className="nav-btn logout" onClick={handleLogout}>
-              Logout
+          <>
+            <button
+              className="nav-btn dashboard blink"
+              onClick={() => {
+                const token = localStorage.getItem("token");
+                if (token) {
+                  navigate("/dashboard");
+                } else {
+                  alert("Please log in to access the dashboard.");
+                  navigate("/login");
+                }
+              }}
+            >
+              Dashboard
             </button>
-          ) : (
-            <>
-              <button
-                className="nav-btn login"
-                onClick={() => navigate("/login")}
-              >
-                Login
+
+            {localStorage.getItem("token") ? (
+              <button className="nav-btn logout" onClick={handleLogout}>
+                Logout
               </button>
-              <button
-                className="nav-btn signup"
-                onClick={() => navigate("/signup")}
-              >
-                Sign Up
-              </button>
-            </>
-          )}
+            ) : (
+              <>
+                <button
+                  className="nav-btn login"
+                  onClick={() => navigate("/login")}
+                >
+                  Login
+                </button>
+                <button
+                  className="nav-btn signup"
+                  onClick={() => navigate("/signup")}
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
+          </>
         </nav>
       </header>
 

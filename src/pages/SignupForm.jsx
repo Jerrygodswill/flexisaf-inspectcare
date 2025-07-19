@@ -26,37 +26,56 @@ export default function SignUpForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { fullname, email, username, password, confirmPassword, agreed } = formData;
+    const { fullname, email, username, password, confirmPassword, agreed } =
+      formData;
 
-    if (!fullname || !email || !username || !password || !confirmPassword || !agreed) {
-      return alert("Please fill in all fields and agree to the privacy policy.");
+    if (
+      !fullname.trim() ||
+      !email.trim() ||
+      !username.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
+      return alert("All fields are required.");
     }
 
     if (password !== confirmPassword) {
       return alert("Passwords do not match!");
     }
 
-    const userData = { fullname, email, username, password };
+    if (!agreed) {
+      return alert("You must agree to the privacy policy.");
+    }
+
+    const userData = {
+      fullname: fullname.trim(),
+      email: email.trim(),
+      username: username.trim(),
+      password: password.trim(),
+    };
 
     try {
-      const res = await fetch("https://health-inspector.onrender.com/api/user/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
+      const res = await fetch(
+        "https://health-inspector.onrender.com/api/user/create",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(userData),
+        }
+      );
 
+      const text = await res.text();
       if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Signup failed");
+        throw new Error(text || "Signup failed");
       }
 
       alert("Account created successfully!");
       navigate("/login");
     } catch (error) {
-      alert(`Signup failed: ${error.message}`);
       console.error("Signup error:", error);
+      alert(`Signup failed: ${error.message}`);
     }
   };
 
@@ -81,6 +100,7 @@ export default function SignUpForm() {
             name="fullname"
             placeholder="Full Name"
             onChange={handleChange}
+            value={formData.fullname}
             required
           />
           <input
@@ -88,6 +108,7 @@ export default function SignUpForm() {
             name="email"
             placeholder="Email"
             onChange={handleChange}
+            value={formData.email}
             required
           />
           <input
@@ -95,6 +116,7 @@ export default function SignUpForm() {
             name="username"
             placeholder="Username"
             onChange={handleChange}
+            value={formData.username}
             required
           />
           <input
@@ -102,6 +124,7 @@ export default function SignUpForm() {
             name="password"
             placeholder="Set your password"
             onChange={handleChange}
+            value={formData.password}
             required
           />
           <input
@@ -109,6 +132,7 @@ export default function SignUpForm() {
             name="confirmPassword"
             placeholder="Re-enter password"
             onChange={handleChange}
+            value={formData.confirmPassword}
             required
           />
 
@@ -117,6 +141,7 @@ export default function SignUpForm() {
               type="checkbox"
               name="agreed"
               onChange={handleChange}
+              checked={formData.agreed}
               required
             />
             I agree with <a href="#">Privacy Policy</a>
