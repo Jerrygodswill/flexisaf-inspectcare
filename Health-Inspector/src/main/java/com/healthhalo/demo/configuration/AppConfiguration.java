@@ -8,6 +8,8 @@ import com.healthhalo.demo.filter.JwtFilter;
 import com.healthhalo.demo.response.AuthResponse;
 import com.healthhalo.demo.service.JwtService;
 import com.healthhalo.demo.service.UserService;
+import com.healthhalo.demo.service.MyUserDetailsService;
+import com.healthhalo.demo.service.UserPrincipal;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -56,7 +58,8 @@ public class AppConfiguration {
     @Autowired
     private JwtService jwtService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -64,9 +67,14 @@ public class AppConfiguration {
     }
 
     @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+    }
+
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOriginPattern("*");
+        config.setAllowedOriginPatterns(List.of("https://your-production-domain.com"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -91,6 +99,7 @@ public class AppConfiguration {
         return config.getAuthenticationManager();
     }
 
+    @Bean
     public AuthFilter getAuthFilter(AuthenticationManager authenticationManager) {
         AuthFilter authFilter = new AuthFilter();
         authFilter.setAuthenticationManager(authenticationManager);
@@ -98,39 +107,38 @@ public class AppConfiguration {
 
         authFilter.setAuthenticationSuccessHandler((request, response, authentication) -> {
             response.setStatus(HttpServletResponse.SC_OK);
-            objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
-
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             UserData userData = userService.fetchDataByEmail(userPrincipal.getUsername());
+
             AuthResponse authResponse = new AuthResponse(
                     userData.getUsername(),
                     userData.getEmail(),
                     userData.getRole(),
-                    jwtService.generateToken(userData));
+                    jwtService.generateToken(userData)
+            );
+
+            response.setContentType("application/json");
             response.getWriter().write(objectMapper.writeValueAsString(authResponse));
         });
 
         authFilter.setAuthenticationFailureHandler((request, response, exception) -> {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("Login Failure " + exception.getMessage());
-            log.error("login error: {}", exception.getMessage());
-        });
+         
 
         return authFilter;
     }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager manager) throws Exception {
-        http
-                .csrf(CsrfConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                
+                
+                ecurityFilterChain filterChain(Http
+                        
+                        rfConfigurer::disable)
+                        rs -> cors.configurationSource
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(publicUrls).permitAll()
-                        .anyRequest().authenticated())
-                .userDetailsService(myUserDetailsService) // ✅ this replaces deprecated DaoAuthenticationProvider
-                .addFilterAt(getAuthFilter(manager), UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                    .anyRequest().authenticated())
+            .userDetailsService(myUserDetailsService)
+            .addFilterAt(getAuthFilter(manager), UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

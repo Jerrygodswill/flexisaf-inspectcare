@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Build outputs
 node_modules
 dist
 dist-ssr
@@ -22,4 +23,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files
 *.env
+
+# Java/Maven/Gradle build artifacts
+**/target/
+*.class
+*.jar
+
+# Python
+*.pyc
+__pycache__/
+✅ What to 
