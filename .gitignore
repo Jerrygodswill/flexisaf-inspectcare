@@ -35,4 +35,6 @@ dist-ssr
 # Python
 *.pyc
 __pycache__/
-✅ What to 
+target/
+*.class
+*.jar

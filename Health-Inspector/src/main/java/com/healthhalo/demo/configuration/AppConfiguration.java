@@ -22,7 +22,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,9 +39,13 @@ import java.util.List;
 public class AppConfiguration {
 
     private final String[] publicUrls = {
-            "/api/user/create", "/v3/api-docs/**",
-            "/swagger-ui.html", "/swagger-ui/**",
-            "/webjars/**", "/actuator/**", "/api/auth/login"
+            "/api/user/create",
+            "/api/auth/login",
+            "/v3/api-docs/**",
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            "/webjars/**",
+            "/actuator/**"
     };
 
     @Autowired
@@ -74,7 +77,7 @@ public class AppConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("https://your-production-domain.com"));
+        config.setAllowedOriginPatterns(List.of("*")); // Allow all origins during development
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -101,8 +104,7 @@ public class AppConfiguration {
 
     @Bean
     public AuthFilter getAuthFilter(AuthenticationManager authenticationManager) {
-        AuthFilter authFilter = new AuthFilter();
-        authFilter.setAuthenticationManager(authenticationManager);
+        AuthFilter authFilter = new AuthFilter(authenticationManager);
         authFilter.setFilterProcessesUrl("/api/auth/login");
 
         authFilter.setAuthenticationSuccessHandler((request, response, authentication) -> {
@@ -114,31 +116,34 @@ public class AppConfiguration {
                     userData.getUsername(),
                     userData.getEmail(),
                     userData.getRole(),
-                    jwtService.generateToken(userData)
-            );
+                    jwtService.generateToken(userData));
 
             response.setContentType("application/json");
             response.getWriter().write(objectMapper.writeValueAsString(authResponse));
         });
 
         authFilter.setAuthenticationFailureHandler((request, response, exception) -> {
-         
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Invalid credentials\"}");
+        });
 
         return authFilter;
     }
-                
-                
-                ecurityFilterChain filterChain(Http
-                        
-                        rfConfigurer::disable)
-                        rs -> cors.configurationSource
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        AuthenticationManager manager = authenticationManager(http.getSharedObject(AuthenticationConfiguration.class));
+        http
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(publicUrls).permitAll()
-                    .anyRequest().authenticated())
-            .userDetailsService(myUserDetailsService)
-            .addFilterAt(getAuthFilter(manager), UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                        .anyRequest().authenticated())
+                .userDetailsService(myUserDetailsService)
+                .addFilterAt(getAuthFilter(manager), UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
