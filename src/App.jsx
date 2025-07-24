@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import SignUpForm from "./pages/SignupForm";
 import LoginForm from "./pages/LoginForm";
-import Dashboard from "./pages/dashboard";
+import Dashboard from "./pages/Dashboard";
 import Symptoms from "./pages/Symptoms";
 import Result from "./pages/Resultpage";
 import MedicationReminder from "./pages/MedicationReminder";
