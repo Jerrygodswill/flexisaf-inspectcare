@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist",
-     "start": "vite preview"
+     "start":  "vite preview --host --port $PORT"
   },
   "dependencies": {
     "clsx": "^2.1.1",
