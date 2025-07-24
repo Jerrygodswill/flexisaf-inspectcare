@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Lightbulb, Target, HeartHandshake } from "lucide-react";
 import "../pages/landingpage.css";
 
-import logo from "../assets/logo-InspectCare.png";
+import logo from "../assets/logo-inspectCare.png";
 import heroImage from "../assets/flexisaf-logo.jpg";
 import twitterIcon from "../assets/twitter.png";
 import facebookIcon from "../assets/facebook.png";
