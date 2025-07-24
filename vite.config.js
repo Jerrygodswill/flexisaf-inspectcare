@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
-  base: '/flexisaf-inspectcare/', // 👈 For GitHub Pages
+  base: '/flexisaf-inspectcare/', // For GitHub Pages
   plugins: [react()],
   server: {
     proxy: {
@@ -12,5 +12,10 @@ export default defineConfig({
         secure: false,
       },
     },
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4173,
+    allowedHosts: ['flexisaf-inspectcare.onrender.com'], // ✅ Allow Render domain
   },
 });
