@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import AiEnquiry from "../components/AiEnquiry"; // Adjust the path if needed
-import "./Dashboard.css";
+import "./dashboard.css";
 
 function Dashboard() {
   const navigate = useNavigate();
